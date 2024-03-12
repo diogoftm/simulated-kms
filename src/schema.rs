@@ -5,6 +5,7 @@ diesel::table! {
         id -> Uuid,
         master_sae_id -> Text,
         slave_sae_id -> Text,
+        key_type -> Int4,
         size -> Int4,
         content -> Text,
         active -> Bool,

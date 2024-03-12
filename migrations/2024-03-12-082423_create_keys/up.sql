@@ -7,6 +7,7 @@ CREATE TABLE keys (
     id               uuid        NOT NULL,
     master_sae_id    TEXT        NOT NULL CHECK(ltrim(rtrim(master_sae_id)) != ''),
     slave_sae_id     TEXT        NOT NULL CHECK(ltrim(rtrim(slave_sae_id)) != ''),
+    key_type         INT         NOT NULL,
     size             INT         NOT NULL CHECK(size > 0),
     content          TEXT        NOT NULL CHECK(ltrim(rtrim(content)) != ''),
     active           BOOLEAN     NOT NULL DEFAULT TRUE,

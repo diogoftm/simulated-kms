@@ -20,6 +20,7 @@ use crate::{
 pub struct RequestParams {
     number: Option<i32>,
     size: Option<i32>,
+    key_type: Option<i32>,
     #[serde(rename = "additional_slave_SAE_IDs")]
     additional_slave_sae_ids: Option<Vec<String>>,
 }
@@ -29,6 +30,7 @@ impl RequestParams {
         Self {
             number: None,
             size: None,
+            key_type: None,
             additional_slave_sae_ids: None,
         }
     }
@@ -80,6 +82,7 @@ fn service_request(
 ) -> CustomResult {
     let key_size = params.size.unwrap_or(DEFAULT.key_size);
     let num_keys = params.number.unwrap_or(DEFAULT.num_keys);
+    let key_type = params.key_type.unwrap_or(DEFAULT.key_type);
 
     ops::key::validate_key_size(key_size)?;
     ops::key::validate_num_keys(num_keys)?;
@@ -88,7 +91,7 @@ fn service_request(
     let slave_sae_ids =
         validate_and_parse_slave_sae_ids(master_sae_id, &slave_sae_id, params)?;
 
-    let generated_keys = ops::key::generate_random_keys(key_size, num_keys)?;
+    let generated_keys = ops::key::generate_random_keys(key_size, num_keys, key_type)?;
 
     ops::key::save_keys(&generated_keys, master_sae_id, &slave_sae_ids)?;
 

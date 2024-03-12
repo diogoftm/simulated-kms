@@ -10,6 +10,12 @@ use log::error;
 use rand::prelude::*;
 use uuid::Uuid;
 
+use rand::RngCore;
+use rand_chacha::ChaChaRng;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
+
+
 pub fn validate_key_size(key_size_bits: i32) -> Result<(), Error> {
     if key_size_bits <= 0 {
         return Err(Error::new(
@@ -42,6 +48,7 @@ pub fn validate_num_keys(num_keys: i32) -> Result<(), Error> {
 pub fn generate_random_keys(
     key_size_bits: i32,
     num_keys: i32,
+    key_type: i32,
 ) -> Result<Vec<Key>, Error> {
     validate_key_size(key_size_bits)?;
     validate_num_keys(num_keys)?;
@@ -58,6 +65,7 @@ pub fn generate_random_keys(
         keys.push(Key {
             id: Uuid::new_v4(),
             content: generate_random_key(key_size_bits)?,
+            key_type,
             size: key_size_bits,
         });
     }
@@ -107,6 +115,7 @@ pub fn save_keys(
         for slave_sae_id in slave_sae_ids {
             keys_to_insert.push(NewKey {
                 id: key.id,
+                key_type: key.key_type,
                 master_sae_id: master_sae_id.to_string(),
                 slave_sae_id: slave_sae_id.clone(),
                 size: key.size,
@@ -181,7 +190,7 @@ fn retrieve_key_from_db(
         .filter(keys::master_sae_id.eq(master_sae_id))
         .filter(keys::slave_sae_id.eq(slave_sae_id))
         .filter(keys::active.eq(true))
-        .select((keys::id, keys::content, keys::size))
+        .select((keys::id, keys::content, keys::key_type, keys::size))
         .get_result(db_conn)
         .optional()
     {
@@ -192,20 +201,67 @@ fn retrieve_key_from_db(
         }
     };
 
-    match retrieval_result {
-        Some(retrieved_key) => Ok(retrieved_key),
-        None => {
-            if num_keys_with_master_sae_id > 0 {
-                Err(Error::unauthorized())
-            } else {
-                Err(Error::new(
-                    StatusCode::BAD_REQUEST,
-                    format!("Key {} not found", key_id).as_str(),
-                ))
+    if let Some(retrieval_result) = retrieval_result {
+        if retrieval_result.key_type == 1 {
+            let mut hasher = DefaultHasher::new();
+            master_sae_id.hash(&mut hasher);
+            slave_sae_id.hash(&mut hasher);
+            key_id.hash(&mut hasher);
+            let seed = hasher.finish();
+
+            let rand_size: usize = match (retrieval_result.size/8).try_into() {
+                Ok(value) => value,
+                Err(e) => {
+                    error!("Failed to convert size from 'i32' to 'usize: {:?}", e);                
+                    return Err(Error::internal_server_error());
+                }
+            };
+
+            let mut rng = ChaChaRng::seed_from_u64(seed);
+            let mut random_bytes = vec![0; rand_size];
+            rng.fill_bytes(&mut random_bytes);
+        
+            let mut full_key = converter::from_base64(retrieval_result.content);
+            
+            let mut new_key = vec![0; rand_size];
+            for (idx, byte) in full_key.iter_mut().enumerate() {
+                let random_byte = random_bytes[idx % rand_size];
+                new_key[idx] = 0;
+                for bit_idx in 0..4 {
+                    let random_bit = (random_byte >> bit_idx) & 1;
+            
+
+                    if random_bit == 0 {
+                        new_key[idx] = new_key[idx] | ((*byte & (0x02 << bit_idx*2)) >> 1);
+                    } else {
+                        new_key[idx] = new_key[idx] | (*byte & (0x01 << bit_idx*2)) | (0x02 << (bit_idx*2));
+                    }
+                }
             }
+            
+            let oblivious_key = converter::to_base64(&new_key);
+            Ok(Key {
+                id: retrieval_result.id,
+                content: oblivious_key,
+                key_type: retrieval_result.key_type,
+                size: retrieval_result.size,
+            })
+        } else{
+            Ok(retrieval_result)
+        }
+    } else{
+        if num_keys_with_master_sae_id > 0 {
+            Err(Error::unauthorized())
+        } else {
+            Err(Error::new(
+                StatusCode::BAD_REQUEST,
+                format!("Key {} not found", key_id).as_str(),
+            ))
         }
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -219,14 +275,14 @@ mod tests {
     #[test_case(false, 17; "Positive value, non-divisible by 8")]
     #[test_case(true, 16; "Positive value, divisible by 8")]
     fn test_key_size_validation(is_ok: bool, key_size_bits: i32) {
-        assert_eq!(generate_random_keys(key_size_bits, 1).is_ok(), is_ok);
+        assert_eq!(generate_random_keys(key_size_bits, 1, 0).is_ok(), is_ok);
     }
 
     #[test_case(false, 0; "Zero")]
     #[test_case(false, -10; "Negative value")]
     #[test_case(true, 16; "Positive value")]
     fn test_num_keys_validation(is_ok: bool, num_keys: i32) {
-        assert_eq!(generate_random_keys(8, num_keys).is_ok(), is_ok);
+        assert_eq!(generate_random_keys(8, num_keys, 0).is_ok(), is_ok);
     }
 
     #[test]
@@ -234,7 +290,7 @@ mod tests {
         let key_size_bits: i32 = 16;
         let num_keys: i32 = 2;
 
-        let result = generate_random_keys(key_size_bits, num_keys);
+        let result = generate_random_keys(key_size_bits, num_keys, 0);
         assert!(result.is_ok());
         let key_container = result.unwrap();
 

@@ -32,7 +32,7 @@ db_container:
 	DATABASE_PORT=$(DATABASE_PORT) \
 	DATABASE_USER=$(DATABASE_USER) \
 	DATABASE_PASSWORD=$(DATABASE_PASSWORD) \
-	docker-compose up --no-start
+	docker compose up --no-start
 
 db_start: db_container
 	cd $(CURDIR) && \
@@ -40,7 +40,7 @@ db_start: db_container
 	DATABASE_PORT=$(DATABASE_PORT) \
 	DATABASE_USER=$(DATABASE_USER) \
 	DATABASE_PASSWORD=$(DATABASE_PASSWORD) \
-	docker-compose start
+	docker compose start
 
 db_migration:
 	cd $(CURDIR) && diesel migration run --database-url $(DATABASE_URL)
@@ -51,7 +51,7 @@ db_stop:
 	DATABASE_PORT=$(DATABASE_PORT) \
 	DATABASE_USER=$(DATABASE_USER) \
 	DATABASE_PASSWORD=$(DATABASE_PASSWORD) \
-	docker-compose stop
+	docker compose stop
 
 db_clean_container:
 	cd $(CURDIR) && \
@@ -59,7 +59,7 @@ db_clean_container:
 	DATABASE_PORT=$(DATABASE_PORT) \
 	DATABASE_USER=$(DATABASE_USER) \
 	DATABASE_PASSWORD=$(DATABASE_PASSWORD) \
-	docker-compose down
+	docker compose down
 
 db_clean_container_and_data:
 	cd $(CURDIR) && \
@@ -67,7 +67,7 @@ db_clean_container_and_data:
 	DATABASE_PORT=$(DATABASE_PORT) \
 	DATABASE_USER=$(DATABASE_USER) \
 	DATABASE_PASSWORD=$(DATABASE_PASSWORD) \
-	docker-compose down -v --rmi local
+	docker compose down -v --rmi local
 
 build:
 	@cd $(CURDIR) && cargo build --workspace
@@ -89,14 +89,14 @@ get_enc_key:
 	CERTS_DIR=$(CERTS_DIR) \
 	ETSI_014_REF_IMPL_PORT_NUM=$(ETSI_014_REF_IMPL_PORT_NUM) \
 	ETSI_014_REF_IMPL_IP_ADDR=$(ETSI_014_REF_IMPL_IP_ADDR) \
-	./examples/enc_keys.sh GET
+	./examples/enc_keys.sh GET $(KEY_TYPE)
 
 post_enc_key:
 	cd $(CURDIR) && \
 	CERTS_DIR=$(CERTS_DIR) \
 	ETSI_014_REF_IMPL_PORT_NUM=$(ETSI_014_REF_IMPL_PORT_NUM) \
 	ETSI_014_REF_IMPL_IP_ADDR=$(ETSI_014_REF_IMPL_IP_ADDR) \
- 	./examples/enc_keys.sh POST
+ 	./examples/enc_keys.sh POST $(KEY_TYPE)
 
 get_dec_key:
 	cd $(CURDIR) && \
@@ -115,6 +115,24 @@ post_dec_key:
 run_tests:
 	@cd $(CURDIR) && cargo test
 
+reqs:
+	sudo apt install pkg-config libssl-dev
+	sudo apt install libpq-dev
+	sudo apt install moreutils
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+	cargo install diesel_cli --no-default-features --features postgres
+	sudo apt-get update
+	sudo apt-get install ca-certificates curl
+	sudo install -m 0755 -d /etc/apt/keyrings
+	sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+	sudo chmod a+r /etc/apt/keyrings/docker.asc
+	echo \
+	"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+	$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+	sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	sudo apt-get update
+	sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	
 clean:
 	@cd $(CURDIR) && cargo clean
 

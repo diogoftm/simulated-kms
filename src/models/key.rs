@@ -12,6 +12,7 @@ pub struct NewKey {
     pub id: Uuid,
     pub master_sae_id: String,
     pub slave_sae_id: String,
+    pub key_type: i32,
     pub size: i32,
     pub content: String,
 }
@@ -22,6 +23,8 @@ pub struct Key {
     pub id: Uuid,
     #[serde(rename = "key")]
     pub content: String,
+    #[serde(skip)]
+    pub key_type: i32,
     #[serde(skip)]
     pub size: i32,
 }

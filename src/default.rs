@@ -4,6 +4,7 @@
 pub struct Default<'a> {
     // Keys
     pub key_size: i32,
+    pub key_type: i32,
     pub num_keys: i32,
     pub max_key_count: i32,
     pub max_key_per_request: i32,
@@ -18,6 +19,7 @@ pub struct Default<'a> {
 
 pub const DEFAULT: Default = Default {
     key_size: 1024,
+    key_type: 0,
     num_keys: 1,
     max_key_count: 0,
     max_key_per_request: 0,

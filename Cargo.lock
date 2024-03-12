@@ -539,6 +539,7 @@ dependencies = [
  "openssl",
  "pretty_assertions",
  "rand",
+ "rand_chacha",
  "serde",
  "serde_json",
  "temp-env",

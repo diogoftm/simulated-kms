@@ -6,21 +6,34 @@ This project provides a reference implementation to the
 [ETSI GS QKD 014 v1.1.1](https://www.etsi.org/deliver/etsi_gs/QKD/001_099/014/01.01.01_60/gs_QKD014v010101p.pdf)
 standard.
 
+# This fork - changes
+This version changes the source code in order to simulate the creation of [oblivious keys](https://www.mdpi.com/2076-3417/10/12/4080).
+Note that, in a multicast scenario, all the slave SAEs have different oblivious keys with a distinct relationship with the original key.
+
 # Installation
 
 ## Reference OS
 
 ```
 Ubuntu 22.04.1 LTS
+Pop!_OS 22.04 LTS
 ```
 
-This implementation has been developed and tested on Ubuntu 22.04.1 LTS.
+This implementation has been developed and tested on Ubuntu 22.04.1 LTS and Pop!_OS 22.04 LTS.
 While no OS specific components are present in this implementation, no
 guarantees are made that it works on other OSs.
 If you encounter issues deploying this implementation on another OS, reach out
 and we will try our best to make it work on your setup.
 
-## Required OS packages
+## Requirements
+
+Running
+```bash
+make reqs
+```
+should install all requirements.
+
+### Required OS packages
 
 The server requires the following packages to be installed:
 * pkg-config
@@ -30,7 +43,7 @@ On Ubuntu, these can be installed using
 ```bash
 sudo apt install pkg-config libssl-dev
 ```
-## Database management packages
+### Database management packages
 
 The [Diesel](https://diesel.rs/) rust library is used to handle database
 operations, including migrations.
@@ -256,15 +269,15 @@ make run_server
 Runs the server using the same database created with `make db_start`.
 
 ```bash
-make get_enc_key
+make get_enc_key KEY_TYPE=X
 ```
-Retrieves an encryption key.
+Retrieves an encryption key. `X!=1` for symmetric keys. `X==1` for oblivious keys.
 
 ```bash
-make post_enc_key
+make post_enc_key KEY_TYPE=X
 ```
 
-Retrieves 3 encryption keys.
+Retrieves 3 encryption keys. `X!=1` for symmetric keys. `X==1` for oblivious keys.
 
 ```bash
 make get_dec_key KEY=XXX

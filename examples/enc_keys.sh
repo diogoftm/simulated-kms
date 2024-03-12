@@ -2,6 +2,12 @@
 # SPDX-FileCopyrightText: © 2023 Merqury Cybersecurity Ltd <info@merqury.eu>
 # SPDX-License-Identifier: AGPL-3.0-only
 ADDR=${ETSI_014_REF_IMPL_IP_ADDR}:${ETSI_014_REF_IMPL_PORT_NUM}/api/v1/keys
+
+if [ -z "$2" ]; then
+    echo "No key type supplied. 1 for oblivious. Any other number for symmetric." 
+    exit
+fi
+
 if [ "$1" = "GET" ]; then
     # Description:
     #
@@ -25,8 +31,8 @@ if [ "$1" = "GET" ]; then
         --cacert "${CERTS_DIR}"/root.crt  \
         --key "${CERTS_DIR}"/sae_001.key  \
         --cert "${CERTS_DIR}"/sae_001.crt \
-        "https://${ADDR}/sae_002/enc_keys?number=1&size=24"
-    echo "Strings are equal."
+        "https://${ADDR}/sae_002/enc_keys?number=1&size=24&key_type=${2}"
+    echo
 elif [ "$1" = "POST" ]; then
     # Description:
     #
@@ -54,13 +60,11 @@ elif [ "$1" = "POST" ]; then
         --cert "${CERTS_DIR}"/sae_001.crt         \
         --header "Content-Type: application/json" \
         --data-raw '{
-            "number": 3,
+            "number": 1,
             "size": 24,
-            "additional_slave_SAE_IDs": [
-                "sae_additional_123",
-                "sae_additional_456"
-            ]}'                                   \
+            "key_type": ${2}}'                       \
         "https://${ADDR}/sae_002/enc_keys"
+    echo
 else
     echo "The method to use must be given as a command line parameter."
     echo "Supported parameters are 'GET' or 'POST'."
