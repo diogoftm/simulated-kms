@@ -6,7 +6,7 @@ version: "3"
 services:
     key_db:
         container_name: key_store_db
-        image: postgres:15
+        image: postgres:17
         environment:
             - POSTGRES_DB=key_store
             - POSTGRES_USER=${DATABASE_USER}

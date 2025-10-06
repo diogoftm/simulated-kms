@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2023 Merqury Cybersecurity Ltd <info@merqury.eu>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt update     && \
     apt upgrade -y && \
